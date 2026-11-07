@@ -1,1 +1,7 @@
-
+import {randomBytes,scryptSync,timingSafeEqual,createHash,randomUUID} from 'node:crypto';
+export const tokenHash=token=>createHash('sha256').update(token).digest('hex');
+export function signupUser(input){if(!['vendor','customer'].includes(input.role))throw new Error('Choose Company / Vendor or Customer / Client');const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase();if(name.length<2||name.length>100)throw new Error('Enter your name (2–100 characters)');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)throw new Error('Enter a valid email');if(typeof input.password!=='string'||input.password.length<10||input.password.length>200)throw new Error('Use a password of 10–200 characters');const salt=randomBytes(16).toString('hex');return {id:randomUUID(),name,email,role:input.role,salt,passwordHash:scryptSync(input.password,salt,64).toString('hex'),createdAt:new Date().toISOString()};}
+export function verifyPassword(user,password){if(typeof password!=='string'||password.length>200)return false;const actual=scryptSync(password,user?.salt||'unknown-user',64);return !!user&&timingSafeEqual(actual,Buffer.from(user.passwordHash,'hex'));}
+export const publicUser=({id,name,email,role})=>({id,name,email,role});
+export const canSeeClientProject=(p,u)=>u.role==='customer'&&(p.clientEmail===u.email||p.customerId===u.id||p.reviews.some(r=>r.customerId===u.id));
+export function requireOwner(p,u){if(u.role!=='vendor'||p.ownerId!==u.id)throw new Error('Project not found or access denied');}
