@@ -8,7 +8,19 @@ A local project workspace for agreeing scope before work starts, tracking delive
 
 ## Run
 
-Requires Node 22.13+ (tested on 22.22).
+Requires Node 22.13+ (tested on 22.22) and [Ollama](https://ollama.com/download) for local model inference. The demonstrated model is Qwen3 4B; allow roughly 3 GB disk for weights and sufficient free memory (tested on Apple M1). No paid API account or subscription is used.
+
+Start Ollama with cloud features disabled in a separate terminal:
+
+```sh
+OLLAMA_NO_CLOUD=1 ollama serve
+```
+
+If the Ollama desktop service is already running, quit it first before starting this command. In another terminal, download the model once:
+
+```sh
+ollama pull qwen3:4b
+```
 
 ```sh
 git clone https://github.com/nikmlnkr/scopepay.git
@@ -17,7 +29,7 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:4177. No AI API key, model download, or paid subscription is needed. Without PayPal configuration, invoices are explicitly simulated. To test PayPal sandbox invoicing, follow [the integration guide](docs/INTEGRATIONS.md).
+Open http://127.0.0.1:4177. Scope review calls the downloaded Qwen3 model through Ollama on this computer. No AI API key or paid subscription is needed. If Ollama is unavailable, review fails visibly; there is no cloud or rules fallback. Without PayPal configuration, invoices are explicitly simulated. To test PayPal sandbox invoicing, follow [the integration guide](docs/INTEGRATIONS.md).
 
 The app binds only to loopback. The database is `.data/demo.sqlite`, excluded from source control. The front end uses system fonts and makes no external font requests.
 
@@ -47,7 +59,7 @@ Approval tokens are random, version-bound and expire after seven days. Saving an
 
 **Not production-ready.** No email verification, password recovery, MFA, invitation delivery, multi-user organization membership, comprehensive abuse controls, or public deployment. Email routing is appropriate only for this local prototype until verified email ownership is implemented. Each account has one fixed role; use distinct local test accounts for both roles. Company costs and credentials must never be added to client exports.
 
-**Scope comparison uses deterministic rules. PayPal sandbox is available when configured.** No AI provider or local model is used by the application. Humans review classifications and set all prices. Sandbox statuses are verified by server-side PayPal reads; no live payments, customer validation or production availability is claimed. See `docs/INTEGRATIONS.md` for future integration requirements.
+**Scope review uses local Qwen3:4b inference through Ollama. PayPal sandbox is available when configured.** The model reviews saved scope and compares client requests against approved scope and accepted changes. Humans review classifications and set all prices. Sandbox statuses are verified by server-side PayPal reads; no live payments, customer validation or production availability is claimed. See `docs/INTEGRATIONS.md` for future integration requirements.
 
 The original prototype workspace is preserved in the old SQLite workspace table and privately archived with the starter project; it is not presented as a newly approved baseline. The old public workspace endpoints have been removed. Old prototype approval URLs are replaced by the authenticated review flow. `server/domain.js` and its tests remain as regression references for the initial prototype; active business logic is in `server/projects.js` and `server/auth.js`.
 
@@ -73,12 +85,22 @@ All sandbox invoices use the configured test buyer, regardless of the local clie
 
 Creation intent is saved before dispatch. Requests with uncertain outcomes reconcile by stored invoice number; they never blindly create again. Invoice IDs, seller, recipient, accepted snapshot reference, currency and total are checked before accepting status. A failed or mismatched check leaves the last verified state unchanged. Status refresh uses explicit polling, not webhooks. Existing simulated invoices cannot be converted into sandbox invoices.
 
-### Scope review — current no-cost implementation
+### Scope review — local AI at runtime
 
-The current application uses a deterministic rule engine (`server/scope-rules.js`), not model inference. The consumer UI uses neutral labels such as Scope review and Compare changes. Do not describe this implementation as a trained AI model in submission materials.
+Both **Review saved scope** and **Compare with approved scope** invoke `server/ai.js` through the authenticated Node server. It calls only `http://127.0.0.1:11434/api/chat` with Qwen3:4b, structured JSON output, temperature 0 and no tools. Model output includes a summary, classifications, reasons, evidence and clarification questions. The result displays the model name and is saved with a timestamp and source fingerprint.
 
-Rules flag vague criteria, unmeasured deliverables, unknown revision usage, exact agreed deliverable matches, translation/format exclusions and potential duplicate work in accepted changes. Unknown or conflicting requests require clarification. Enter one request per line, at most 20 lines and 160 characters per item. The checker provides exact source excerpts; the seller reviews every classification and enters prices, and the client approves before additional work starts. It does not interpret arbitrary contracts or determine legal entitlement.
+Evidence must match an exact supplied source. Unsupported or uncertain findings become clarification. Additional deterministic guards downgrade conflicts, unknown revision usage and instruction-like requests to clarification; they never replace the model call or create chargeable classifications. Conflicting clauses can still be missed by a small model, so all findings require human review. No model output sets a price, approves a scope or triggers a payment. Internal costs, credentials and user-account fields are excluded from the inference payload.
 
-`npm run dev` starts only ScopePay. No AI API key, AI subscription or model download is required. Prototype AI adapter/test code is retained but not imported by the application runtime. `npm test` tests those adapters with fixtures only; it makes no AI API calls. Paid/provider evaluation is not part of the current app or normal test commands.
+Scope review can take tens of seconds on local hardware; first use loads the model. The server blocks overlapping mutations to that project while inference runs, so a completed result cannot overwrite concurrent approvals or scope edits. Timeout, missing model, invalid JSON and invented evidence fail visibly without saving a proposal. Cloud providers are rejected even if API keys are present. Use `OLLAMA_NO_CLOUD=1` when starting Ollama; do not expose port 11434 publicly.
 
-The website remains localhost-only. Public hosting, production authentication, verified email ownership and persistent hosted storage are separate work and may incur infrastructure costs. PayPal is sandbox-only.
+Optional `.env` settings: `AI_PROVIDER=ollama` and `OLLAMA_MODEL=qwen3:4b` (both are the defaults). `npm run dev` starts ScopePay only; Ollama must already be running. Judges running the repository locally need the model installed on that host. A future hosted deployment would run inference on the server so visitors would only need a browser.
+
+Run real local-model checks separately from fixture tests:
+
+```sh
+npm run evaluate:ai
+```
+
+This checks scope readiness, included work, explicit extras, ambiguity, revision uncertainty, instruction attacks, accepted additions and conflicting clauses with synthetic data. The JSON report is saved privately in `.data/setup/ai-evaluation.json`. Normal `npm test` uses fixtures and does not require a model or contact any AI provider.
+
+The website remains localhost-only. Production hosting and authentication are separate work. PayPal is sandbox-only.

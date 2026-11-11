@@ -1,2 +1,2 @@
-// Runtime uses local scope rules; no AI service or API is started.
+// Start ScopePay. Start Ollama separately for local scope inference.
 import '../server/index.js';

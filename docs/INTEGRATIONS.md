@@ -1,6 +1,6 @@
 # PayPal sandbox integration
 
-ScopePay runs locally without any paid services. Scope review runs on the server using local rules; no model service or AI API key is required.
+ScopePay runs locally without any paid services. Scope review runs through a local Ollama service with Qwen3:4b. Follow the README model setup first; no paid AI API or API key is used.
 
 ## Configure your own sandbox
 
@@ -34,7 +34,7 @@ The app is loopback-only. Production requires verified email ownership, HTTPS wi
 
 ## Tools
 
-React, Vite, Node.js, SQLite and the PayPal Invoicing REST API power the application. Codex assisted development and testing. The active scope comparison is deterministic, with validated source excerpts, human pricing and client approval. An inactive experimental model adapter and fixture tests remain in the source; the application does not import or call it.
+React, Vite, Node.js, SQLite and the PayPal Invoicing REST API power the application. Codex assisted development and testing. The active scope review and change comparison invoke Qwen3:4b through Ollama on loopback. Model-generated findings have validated source excerpts; conservative checks can downgrade uncertainty, while humans set prices and clients approve changes. AI service failure is visible and does not fall back to a paid provider. See README for setup and model evaluation.
 
 ## References
 
