@@ -4,6 +4,10 @@ From “one small change” to a clear agreement and a paid invoice.
 
 [MIT licensed](LICENSE). Built for the PayPal AI Hackathon.
 
+[Live application demo (2:09)](https://youtu.be/a2qJRjY1gGg) · [Devpost submission](https://devpost.com/software/scopepay-1c497s)
+
+The demo records real local model inference, company/client approvals, delivery tracking and PayPal sandbox calls. Processing waits are explicitly shortened.
+
 A local project workspace for agreeing scope before work starts, tracking delivery against a company budget, and preserving client-approved scope changes.
 
 ## Run
